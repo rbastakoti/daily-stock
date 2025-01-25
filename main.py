@@ -82,3 +82,7 @@ def get_stock(symbol: str):
     if symbol not in stock_data_cache:
         return {"error": "Stock not found"}
     return {symbol: stock_data_cache[symbol]}
+
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8080)
