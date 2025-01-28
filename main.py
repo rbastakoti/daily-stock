@@ -5,6 +5,8 @@ import os
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
 
+from sentiment import router as sentiment_router
+
 load_dotenv()
 
 app = FastAPI()
@@ -55,6 +57,8 @@ def fetch_stock_data():
                 }]
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
+
+app.include_router(sentiment_router, prefix="/sentiment")            
 
 # Start scheduler on startup
 @app.on_event("startup")
