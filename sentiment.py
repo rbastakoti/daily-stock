@@ -6,28 +6,41 @@ router = APIRouter()
 
 @router.get("/chat/{message}")
 async def chat(message: str):
-    """Send the message to Hugging Face and return a generated response."""
+    """Send the message to OpenRouter and return a generated response."""
     try:
-        api_key = os.getenv("HUGGINGFACE_API_KEY")
-
-        inference_url = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+        api_key = os.getenv("OPENROUTER_API_KEY")  
+        site_url = os.getenv("YOUR_SITE_URL")  
+        site_name = os.getenv("YOUR_SITE_NAME")  
+        
+        inference_url = "https://openrouter.ai/api/v1/chat/completions"
         
         headers = {
             "Authorization": f"Bearer {api_key}",
+            "HTTP-Referer": site_url,
+            "X-Title": site_name,
         }
-        prompt = f"{message}\n\nPlease respond in 1-2 short lines."
+        
+      
+        prompt = message
         data = {
-            "inputs": prompt,
+            "model": "google/gemini-2.0-flash-thinking-exp:free",  
+            "messages": [
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": prompt}
+                    ]
+                }
+            ]
         }
 
         response = requests.post(inference_url, headers=headers, json=data)
         response.raise_for_status()
 
         result = response.json()
-        generated_text = result[0]["generated_text"]
-        cleaned_text = generated_text[len(prompt):].strip()
-
-        return {"response": cleaned_text}
+        generated_text = result.get('choices', [{}])[0].get('message', {}).get('content', 'No content returned')
+        
+        return {"response": generated_text.strip()}
 
     except Exception as e:
         return {"error": str(e)}
