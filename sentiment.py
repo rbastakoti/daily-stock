@@ -25,8 +25,9 @@ async def chat(message: str):
 
         result = response.json()
         generated_text = result[0]["generated_text"]
-        
-        return {"response": generated_text}
+        cleaned_text = generated_text[len(prompt):].strip()
+
+        return {"response": cleaned_text}
 
     except Exception as e:
         return {"error": str(e)}
