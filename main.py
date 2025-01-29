@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
 from apscheduler.schedulers.background import BackgroundScheduler
-
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 from sentiment import router as sentiment_router
 
 load_dotenv()
@@ -24,8 +25,22 @@ stock_data_cache = {}
 
 scheduler = BackgroundScheduler()
 
+MARKET_OPEN = time(9, 30)  
+MARKET_CLOSE = time(17, 0) 
+TIMEZONE = ZoneInfo("US/Eastern") 
+
+def is_market_open():
+    """Check if the current time is within market hours."""
+    now = datetime.now(TIMEZONE).time()
+    return MARKET_OPEN <= now <= MARKET_CLOSE
+
 def fetch_stock_data():
     """Fetch stock data from Finnhub API and store it in cache."""
+
+    if not is_market_open():
+        print("Market is closed. Skipping data fetch.")
+        return
+
     symbols = os.getenv("STOCK_SYMBOLS", "AAPL,MSFT,GOOGL,AMZN,TSLA").split(",")
     api_key = os.getenv("FINNHUB_API_KEY")
     for symbol in symbols:
@@ -58,13 +73,20 @@ def fetch_stock_data():
         except Exception as e:
             print(f"Error fetching data for {symbol}: {e}")
 
+def reset_cache():
+    """Reset the stock data cache at the next market open."""
+    global stock_data_cache
+    stock_data_cache = {}
+    print("Stock data cache has been reset.")
+
 app.include_router(sentiment_router, prefix="/sentiment")            
 
 # Start scheduler on startup
 @app.on_event("startup")
 def startup_event():
-    fetch_stock_data()  # Fetch data immediately on startup
-    scheduler.add_job(fetch_stock_data, "interval", minutes=5)  # Fetch every 5 minutes
+    fetch_stock_data()
+    scheduler.add_job(fetch_stock_data, "interval", minutes=5)
+    scheduler.add_job(reset_cache, "cron", hour=9, minute=0, timezone=TIMEZONE)
     scheduler.start()
 
 @app.on_event("shutdown")
