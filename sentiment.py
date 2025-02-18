@@ -7,6 +7,7 @@ from langchain_openai import AzureChatOpenAI
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.prompts import PromptTemplate
 from dotenv import load_dotenv
+from langchain_core.runnables import RunnablePassthrough
 
 load_dotenv()
 
@@ -24,8 +25,9 @@ AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_ENDPOINT = "https://gen-sentiment.openai.azure.com/"
 AZURE_OPENAI_API_VERSION = "2024-08-01-preview"
 
-vectordb = None
+vectordb = None  
 
+# Function to download the FAISS index and load it
 def download_faiss_from_blob():
     global vectordb
     blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
@@ -41,7 +43,7 @@ def download_faiss_from_blob():
 
     print("FAISS files downloaded and stored locally.")
 
-    embeddings_model= HuggingFaceEmbeddings(model_name="BAAI/bge-large-en-v1.5", model_kwargs= {'device': 'cpu', "trust_remote_code": True})
+    embeddings_model = HuggingFaceEmbeddings(model_name="BAAI/bge-large-en-v1.5", model_kwargs={'device': 'cpu', "trust_remote_code": True})
     vectordb = FAISS.load_local(FAISS_FOLDER, embeddings=embeddings_model, allow_dangerous_deserialization=True)
 
     print("FAISS index loaded successfully!")
@@ -57,32 +59,31 @@ llm = AzureChatOpenAI(
 
 prompt = PromptTemplate(
     input_variables=["context", "query"],
-    template="Context: {context}\nQuestion: {query} | Answer is short but meaningful way with justification"
+    template="Context: {context}\nQuestion: {query} | Answer in a short but meaningful way with justification."
 )
+
+question_feeder = RunnablePassthrough()
+
+rag_chain = {
+    "context": vectordb.as_retriever(),
+    "query": question_feeder
+} | prompt | llm
+
+def execute_chain(chain, question):
+    answer = chain.invoke(question)
+    return answer
 
 @router.get("/chat/{message}")
 async def chat(message: str):
-    """Handles chat requests using FAISS for RAG + Azure OpenAI."""
     try:
-        docs = vectordb.similarity_search(message, k=3)
-        context = "\n\n".join(doc.page_content for doc in docs)
-
-        formatted_prompt = prompt.format(
-            context=context,
-            query=message
-        )
-
-        response = llm.invoke(formatted_prompt)
-
-        return {"response": response.content.strip()}
-
+        answer = execute_chain(rag_chain, message)
+        return {"response": answer.content.strip()}
     except Exception as e:
         return {"error": str(e)}
 
-
 @router.post("/reload-faiss")
 async def reload_faiss():
-    """Manually reloads FAISS index from Azure Blob Storage."""
+    """Manually reloads the FAISS index from Azure Blob Storage."""
     try:
         download_faiss_from_blob()
         return {"message": "FAISS index successfully reloaded."}
