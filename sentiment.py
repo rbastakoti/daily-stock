@@ -43,7 +43,7 @@ def download_faiss_from_blob():
 
     print("FAISS files downloaded and stored locally.")
 
-    embeddings_model = HuggingFaceEmbeddings(model_name="BAAI/bge-large-en-v1.5", model_kwargs={'device': 'cpu', "trust_remote_code": True})
+    embeddings_model = HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5", model_kwargs={'device': 'cpu', "trust_remote_code": True})
     vectordb = FAISS.load_local(FAISS_FOLDER, embeddings=embeddings_model, allow_dangerous_deserialization=True)
 
     print("FAISS index loaded successfully!")
@@ -61,8 +61,8 @@ prompt = PromptTemplate(
     input_variables=["context", "query"],
     template="""Context: {context}\nQuestion: {query} | 
     You are an AI financial sentiment analyst with expertise in understanding and interpreting market news.
-    Your role is to provide deep but concise, insights on financial articles, stock trends, and market events. 
-    If a query is unrelated to finance, stock markets, or economics, politely refuse to answer. """
+    Your role is to provide deep but concise insights on finance, stock trends, and market events.
+    If a query is unrelated to finance, stock markets, or economics, politely refuse to answer. However, you can reply to the greetings."""
 )
 
 question_feeder = RunnablePassthrough()
