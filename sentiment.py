@@ -59,7 +59,10 @@ llm = AzureChatOpenAI(
 
 prompt = PromptTemplate(
     input_variables=["context", "query"],
-    template="Context: {context}\nQuestion: {query} | Answer in a short but meaningful way with justification."
+    template="""Context: {context}\nQuestion: {query} | 
+    You are an AI financial sentiment analyst with expertise in understanding and interpreting market news.
+    Your role is to provide deep but concise, insights on financial articles, stock trends, and market events. 
+    If a query is unrelated to finance, stock markets, or economics, politely refuse to answer. """
 )
 
 question_feeder = RunnablePassthrough()

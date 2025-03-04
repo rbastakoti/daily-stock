@@ -7,6 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
 from sentiment import router as sentiment_router
+import uvicorn
 
 load_dotenv()
 
@@ -25,9 +26,9 @@ stock_data_cache = {}
 
 scheduler = BackgroundScheduler()
 
-MARKET_OPEN = time(9, 30)  
-MARKET_CLOSE = time(17, 0) 
-TIMEZONE = ZoneInfo("US/Eastern") 
+MARKET_OPEN = time(8, 30)  
+MARKET_CLOSE = time(15, 0) 
+TIMEZONE = ZoneInfo("US/Central") 
 
 def is_market_open():
     """Check if the current time is within market hours."""
@@ -79,14 +80,14 @@ def reset_cache():
     stock_data_cache = {}
     print("Stock data cache has been reset.")
 
-app.include_router(sentiment_router, prefix="/sentiment")            
+app.include_router(sentiment_router, prefix="/sentiment")          
 
-# Start scheduler on startup
 @app.on_event("startup")
 def startup_event():
     fetch_stock_data()
     scheduler.add_job(fetch_stock_data, "interval", minutes=5)
-    scheduler.add_job(reset_cache, "cron", hour=9, minute=0, timezone=TIMEZONE)
+    scheduler.add_job(reset_cache, "cron", hour=8, minute=0, timezone=TIMEZONE)
+
     scheduler.start()
 
 @app.on_event("shutdown")
