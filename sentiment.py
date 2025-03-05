@@ -43,7 +43,7 @@ def download_faiss_from_blob():
 
     print("FAISS files downloaded and stored locally.")
 
-    embeddings_model = HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5", model_kwargs={'device': 'cpu', "trust_remote_code": True})
+    embeddings_model = HuggingFaceEmbeddings(model_name="BAAI/bge-large-en-v1.5", model_kwargs={'device': 'cpu', "trust_remote_code": True})
     vectordb = FAISS.load_local(FAISS_FOLDER, embeddings=embeddings_model, allow_dangerous_deserialization=True)
 
     print("FAISS index loaded successfully!")
