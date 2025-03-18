@@ -7,6 +7,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from datetime import datetime, time
 from zoneinfo import ZoneInfo
 from sentiment import router as sentiment_router
+from sentiment import fetch_html_from_blob, download_faiss_from_blob
 import uvicorn
 
 load_dotenv()
@@ -87,7 +88,8 @@ def startup_event():
     fetch_stock_data()
     scheduler.add_job(fetch_stock_data, "interval", minutes=5)
     scheduler.add_job(reset_cache, "cron", hour=8, minute=0, timezone=TIMEZONE)
-
+    scheduler.add_job(fetch_html_from_blob, "cron", hour=7, minute=30, timezone=TIMEZONE)
+    scheduler.add_job(download_faiss_from_blob, "cron", hour=7, minute=50, timezone=TIMEZONE)
     scheduler.start()
 
 @app.on_event("shutdown")

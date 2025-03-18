@@ -1,6 +1,7 @@
 import os
 import requests
 from fastapi import APIRouter
+from fastapi.responses import HTMLResponse
 from azure.storage.blob import BlobServiceClient
 from langchain_community.vectorstores import FAISS
 from langchain_openai import AzureChatOpenAI
@@ -18,6 +19,11 @@ CONTAINER_NAME = "indexblob8482"
 FAISS_FOLDER = "faiss_index"
 FAISS_INDEX_BLOB = "index.faiss"
 PKL_INDEX_BLOB = "index.pkl"
+
+#For graph data
+GRAPH_CONTAINER_NAME = "graph-sentiment"
+GRAPH_BLOB_NAME = "entity_sentiment_tree.html"
+GRAPH_FILE_PATH = "entity_sentiment_tree.html"
 
 # Azure OpenAI Config
 AZURE_OPENAI_DEPLOYMENT = "gpt-4o-mini"
@@ -48,6 +54,19 @@ def download_faiss_from_blob():
 
     print("FAISS index loaded successfully!")
 
+#load graph to backend
+def fetch_html_from_blob():
+    blob_service_client = BlobServiceClient.from_connection_string(AZURE_STORAGE_CONNECTION_STRING)
+    blob_client = blob_service_client.get_blob_client(container=GRAPH_CONTAINER_NAME, blob=GRAPH_BLOB_NAME)
+
+    html_content = blob_client.download_blob().readall().decode("utf-8")
+    with open(GRAPH_FILE_PATH, "w", encoding="utf-8") as file:
+        file.write(html_content)
+
+    print("Graph updated")
+
+
+fetch_html_from_blob()
 download_faiss_from_blob()
 
 llm = AzureChatOpenAI(
@@ -61,7 +80,7 @@ prompt = PromptTemplate(
     input_variables=["context", "query"],
     template="""Context: {context}\nQuestion: {query} | 
     You are an AI financial sentiment analyst with expertise in understanding and interpreting market news.
-    Your role is to provide deep but concise insights on finance, stock trends, and market events.
+    Your role is to provide deep and clear insights on finance, stock trends, and market events.
     If a query is unrelated to finance, stock markets, or economics, politely refuse to answer. However, you can reply to the greetings."""
 )
 
@@ -92,3 +111,11 @@ async def reload_faiss():
         return {"message": "FAISS index successfully reloaded."}
     except Exception as e:
         return {"error": str(e)}
+    
+@router.get("/get-graph")
+async def get_graph():
+    try:
+        with open(GRAPH_FILE_PATH, "r", encoding="utf-8") as file:
+            return HTMLResponse(content=file.read(), status_code=200)
+    except FileNotFoundError:
+        return HTMLResponse(content="Graph not available yet.", status_code=404)

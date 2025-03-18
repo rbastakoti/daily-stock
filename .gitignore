@@ -13,3 +13,4 @@ venv/
 
 *.faiss
 *.pkl
+entity_sentiment_tree.html
